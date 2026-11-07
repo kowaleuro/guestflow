@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import pl.mkowalik.guestflow.guest.dto.CreateGuestRequest;
-import pl.mkowalik.guestflow.guest.dto.GetGuest;
+import pl.mkowalik.guestflow.guest.dto.ResponseGuest;
 import pl.mkowalik.guestflow.guest.exceptions.*;
 
 @Service
@@ -16,7 +16,7 @@ public class GuestService {
     }
 
     @Transactional
-    public GetGuest register(CreateGuestRequest req){
+    public ResponseGuest register(CreateGuestRequest req){
         if (repository.existsByEmail(req.email())){
             throw new GuestConflictException(req.email());
         }
@@ -25,7 +25,7 @@ public class GuestService {
     }
 
     @Transactional(readOnly = true)
-    public GetGuest getById(Long id){
+    public ResponseGuest getById(Long id){
         Guest guest = repository.findById(id)
             .orElseThrow(() -> new GuestNotFoundException(id));
         return GuestMapper.toGuest(guest);

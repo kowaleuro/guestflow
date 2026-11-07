@@ -1,12 +1,12 @@
 package pl.mkowalik.guestflow.guest;
 
-import pl.mkowalik.guestflow.guest.dto.GetGuest;
+import pl.mkowalik.guestflow.guest.dto.ResponseGuest;
 
 final class GuestMapper {
     private GuestMapper() {}
 
-    static GetGuest toGuest(Guest g) {
-        return new GetGuest(
+    static ResponseGuest toGuest(Guest g) {
+        return new ResponseGuest(
             g.getId(),
             g.getName(),
             g.getEmail(),

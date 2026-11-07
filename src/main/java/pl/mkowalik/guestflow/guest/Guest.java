@@ -22,6 +22,8 @@ public class Guest {
     @Enumerated(EnumType.STRING)
     private GuestStatus status;
 
+    public Guest(){}
+
     public Guest(String name, String email, GuestStatus status) {
         this.name = name;
         this.email = email;
