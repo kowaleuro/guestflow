@@ -1,11 +1,14 @@
 package pl.mkowalik.guestflow.guest;
 
-import org.springframework.http.HttpStatus;
+import java.net.URI;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
 import jakarta.validation.Valid;
 import pl.mkowalik.guestflow.guest.dto.CreateGuestRequest;
 import pl.mkowalik.guestflow.guest.dto.ResponseGuest;
@@ -22,9 +25,15 @@ public class GuestController {
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    ResponseGuest register(@Valid @RequestBody CreateGuestRequest request){
-        return service.register(request);
+    ResponseEntity <ResponseGuest> register(@Valid @RequestBody CreateGuestRequest request){
+        ResponseGuest created = service.register(request);
+        URI location = ServletUriComponentsBuilder
+            .fromCurrentRequest()
+            .path("/{id}")
+            .buildAndExpand(created.id())
+            .toUri();
+
+        return ResponseEntity.created(location).body(created);
     }
 
     @GetMapping("/{id}")

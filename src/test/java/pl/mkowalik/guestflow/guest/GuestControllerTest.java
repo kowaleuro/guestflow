@@ -3,17 +3,22 @@ package pl.mkowalik.guestflow.guest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+
+import pl.mkowalik.guestflow.guest.dto.CreateGuestRequest;
 import pl.mkowalik.guestflow.guest.dto.ResponseGuest;
+import pl.mkowalik.guestflow.guest.exceptions.GuestConflictException;
 import pl.mkowalik.guestflow.guest.exceptions.GuestNotFoundException;
 import org.springframework.http.MediaType;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verifyNoInteractions;
+
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(GuestController.class)
-public class GuestControllerTest {
+class GuestControllerTest {
 
     @Autowired
     MockMvc mockMvc;
@@ -21,30 +26,106 @@ public class GuestControllerTest {
     @MockitoBean
     GuestService guestService;
 
+    private static final Long GUEST_ID    = 1L;
+    private static final String GUEST_NAME  = "Jan Kowals";
+    private static final String GUEST_EMAIL = "jano@example.com";
+    private static final GuestStatus GUEST_STATUS = GuestStatus.PENDING_APPROVAL;
+    private static final String BASE_URL = "http://localhost";
+
     @Test
     void getGuestById_returns200AndJson_whenGuestExists() throws Exception {
-        Long guestId = 1L;
-        given(guestService.getById(guestId))
-            .willReturn(new ResponseGuest(guestId, "Kowalski", "kowalski@example.com", GuestStatus.PENDING_APPROVAL));
+        given(guestService.getById(GUEST_ID))
+            .willReturn(new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GUEST_STATUS));
 
-        mockMvc.perform(get("/guest/{id}", guestId))
+        mockMvc.perform(get("/guest/{id}", GUEST_ID))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").value(guestId))
-            .andExpect(jsonPath("$.name").value("Kowalski"))
-            .andExpect(jsonPath("$.email").value("kowalski@example.com"))
-            .andExpect(jsonPath("$.status").value(GuestStatus.PENDING_APPROVAL.name()));
+            .andExpect(jsonPath("$.id").value(GUEST_ID))
+            .andExpect(jsonPath("$.name").value(GUEST_NAME))
+            .andExpect(jsonPath("$.email").value(GUEST_EMAIL))
+            .andExpect(jsonPath("$.status").value("PENDING_APPROVAL"));
     }
-    @Test
-    void getGuestByIdreturns404AndMessage_whenItemDoesNotExist() throws Exception {
-        Long guestId = 99L;
-        given(guestService.getById(guestId))
-            .willThrow(new GuestNotFoundException(guestId));
 
-        mockMvc.perform(get("/guest/{id}", guestId))
+    @Test
+    void getGuestById_returns404AndProblemDetail_whenGuestDoesNotExist() throws Exception {
+        given(guestService.getById(GUEST_ID))
+            .willThrow(new GuestNotFoundException(GUEST_ID));
+
+        String errorMessage = String.format("Guest user with id: %s does not exist.",GUEST_ID);
+        mockMvc.perform(get("/guest/{id}", GUEST_ID))
             .andExpect(status().isNotFound())
             .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
             .andExpect(jsonPath("$.status").value(404))
             .andExpect(jsonPath("$.title").value("Not Found"))
-            .andExpect(jsonPath("$.detail").value("Guest user with id: 99 does not exist."));
+            .andExpect(jsonPath("$.detail").value(errorMessage));
+    }
+
+    @Test
+    void postRegister_returns201AndJson_whenRegistered() throws Exception {
+        CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL);
+        given(guestService.register(request))
+            .willReturn(new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GUEST_STATUS));
+
+        String jsonBody = String.format(
+            """
+                {
+                "name": "%s", "email": "%s"
+                }
+            """,
+            GUEST_NAME, GUEST_EMAIL
+        ); 
+        mockMvc.perform(post("/guest")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(jsonBody))
+            .andExpect(status().isCreated())
+            .andExpect(header().string("Location", "%s/guest/%s".formatted(BASE_URL,GUEST_ID)))
+            .andExpect(jsonPath("$.id").value(GUEST_ID))
+            .andExpect(jsonPath("$.name").value(GUEST_NAME))
+            .andExpect(jsonPath("$.email").value(GUEST_EMAIL))
+            .andExpect(jsonPath("$.status").value("PENDING_APPROVAL"));
+    }
+
+    @Test
+    void postRegister_returns409AndProblemDetail_whenConflict() throws Exception {
+        CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL);
+        given(guestService.register(request))
+            .willThrow(new GuestConflictException(GUEST_EMAIL));
+        
+        String jsonBody = String.format(
+            """
+                {
+                "name": "%s", "email": "%s"
+                }
+            """,
+            GUEST_NAME, GUEST_EMAIL
+        ); 
+        
+        String errorMessage = String.format("Guest user with email: %s already exists.",GUEST_EMAIL);
+        mockMvc.perform(post("/guest")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(jsonBody))
+            .andExpect(status().isConflict())
+            .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.status").value(409))
+            .andExpect(jsonPath("$.title").value("Conflict"))
+            .andExpect(jsonPath("$.detail").value(errorMessage));
+    }
+
+    @Test
+    void postRegister_returns400andProblemDetail_whenEmailInvalid() throws Exception {
+        String jsonBody = String.format(
+            """
+                {
+                "name": "%s", "email": "%s"
+                }
+            """,
+            GUEST_NAME, "guest.Test"
+        ); 
+
+        mockMvc.perform(post("/guest")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonBody))
+            .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(guestService);
     }
 }

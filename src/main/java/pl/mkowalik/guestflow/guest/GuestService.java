@@ -21,13 +21,13 @@ public class GuestService {
             throw new GuestConflictException(req.email());
         }
         Guest guest = new Guest(req.name(), req.email(), GuestStatus.PENDING_APPROVAL);
-        return GuestMapper.toGuest(repository.save(guest));
+        return GuestMapper.toResponseGuest(repository.save(guest));
     }
 
     @Transactional(readOnly = true)
     public ResponseGuest getById(Long id){
         Guest guest = repository.findById(id)
             .orElseThrow(() -> new GuestNotFoundException(id));
-        return GuestMapper.toGuest(guest);
+        return GuestMapper.toResponseGuest(guest);
     }
 }

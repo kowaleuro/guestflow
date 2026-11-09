@@ -5,7 +5,7 @@ import pl.mkowalik.guestflow.guest.dto.ResponseGuest;
 final class GuestMapper {
     private GuestMapper() {}
 
-    static ResponseGuest toGuest(Guest g) {
+    static ResponseGuest toResponseGuest(Guest g) {
         return new ResponseGuest(
             g.getId(),
             g.getName(),
