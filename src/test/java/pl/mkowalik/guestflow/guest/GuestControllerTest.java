@@ -32,6 +32,8 @@ class GuestControllerTest {
     private static final GuestStatus GUEST_STATUS = GuestStatus.PENDING_APPROVAL;
     private static final String BASE_URL = "http://localhost";
 
+    // ---------- getById ----------
+
     @Test
     void getGuestById_returns200AndJson_whenGuestExists() throws Exception {
         given(guestService.getById(GUEST_ID))
@@ -58,6 +60,8 @@ class GuestControllerTest {
             .andExpect(jsonPath("$.title").value("Not Found"))
             .andExpect(jsonPath("$.detail").value(errorMessage));
     }
+
+    // ---------- register ----------
 
     @Test
     void postRegister_returns201AndJson_whenRegistered() throws Exception {

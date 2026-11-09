@@ -15,6 +15,13 @@ public class GuestService {
         this.repository = repository;
     }
 
+    @Transactional(readOnly = true)
+    public ResponseGuest getById(Long id){
+        Guest guest = repository.findById(id)
+            .orElseThrow(() -> new GuestNotFoundException(id));
+        return GuestMapper.toResponseGuest(guest);
+    }
+
     @Transactional
     public ResponseGuest register(CreateGuestRequest req){
         if (repository.existsByEmail(req.email())){
@@ -22,12 +29,5 @@ public class GuestService {
         }
         Guest guest = new Guest(req.name(), req.email(), GuestStatus.PENDING_APPROVAL);
         return GuestMapper.toResponseGuest(repository.save(guest));
-    }
-
-    @Transactional(readOnly = true)
-    public ResponseGuest getById(Long id){
-        Guest guest = repository.findById(id)
-            .orElseThrow(() -> new GuestNotFoundException(id));
-        return GuestMapper.toResponseGuest(guest);
     }
 }
