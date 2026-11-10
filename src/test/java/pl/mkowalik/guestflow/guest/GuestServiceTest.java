@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import pl.mkowalik.guestflow.guest.dto.CreateGuestRequest;
 import pl.mkowalik.guestflow.guest.dto.ResponseGuest;
+import pl.mkowalik.guestflow.guest.exceptions.GuestApprovedStatusConflictException;
 import pl.mkowalik.guestflow.guest.exceptions.GuestConflictException;
 import pl.mkowalik.guestflow.guest.exceptions.GuestNotFoundException;
 
@@ -111,5 +112,45 @@ class GuestServiceTest {
     }
 
     // ---------- approve ----------
+
+     @Test
+    void approve_changeStatusAndReturnsResponse_whenGuestExistAndIsNotApproved() {
+        Guest guest = new Guest(GUEST_NAME, GUEST_EMAIL, GuestStatus.PENDING_APPROVAL);
+        guest.setId(GUEST_ID);
+        
+        given(repository.findById(GUEST_ID))
+            .willReturn(Optional.of(guest));
+        
+        ResponseGuest result = service.approve(GUEST_ID);
+        assertThat(guest.getStatus()).isEqualTo(GuestStatus.APPROVED);
+        assertThat(result)
+            .isEqualTo(new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GuestStatus.APPROVED));
+    }
+
+    @Test
+    void approve_throwsNotFound_whenGuestNotFound() {
+        Guest guest = new Guest(GUEST_NAME, GUEST_EMAIL, GuestStatus.APPROVED);
+        guest.setId(GUEST_ID);
+        
+        given(repository.findById(GUEST_ID))
+            .willReturn(Optional.of(guest));
+        
+        String errorMessage = String.format("Guest user with id: %s is already approved.",GUEST_ID);
+
+        assertThatThrownBy(() -> service.approve(GUEST_ID))
+            .isInstanceOf(GuestApprovedStatusConflictException.class)
+            .hasMessage(errorMessage);
+    }
+
+    @Test
+    void approve_throwsConflict_whenGuestStatusIsApproved() {
+        given(repository.findById(GUEST_ID))
+            .willReturn(Optional.empty());
+
+        String errorMessage = String.format("Guest user with id: %s does not exist.",GUEST_ID);
+        assertThatThrownBy(() -> service.approve(GUEST_ID))
+            .isInstanceOf(GuestNotFoundException.class)
+            .hasMessage(errorMessage);
+    }
 
 }

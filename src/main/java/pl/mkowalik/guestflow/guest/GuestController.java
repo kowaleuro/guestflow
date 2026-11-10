@@ -24,6 +24,8 @@ public class GuestController {
         this.service = service;
     }
 
+    //--------- MAPPINGS ---------
+
     @PostMapping
     ResponseEntity <ResponseGuest> register(@Valid @RequestBody CreateGuestRequest request){
         ResponseGuest created = service.register(request);
@@ -39,5 +41,10 @@ public class GuestController {
     @GetMapping("/{id}")
     public ResponseGuest getGuest(@PathVariable Long id) {
         return service.getById(id);
+    }
+
+    @PostMapping("/{id}/approve")
+    public ResponseGuest approve(@PathVariable Long id) {
+        return service.approve(id);
     }
 }

@@ -1,6 +1,5 @@
 package pl.mkowalik.guestflow.guest;
 
-import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,8 +31,14 @@ public class GuestService {
         return GuestMapper.toResponseGuest(repository.save(guest));
     }
 
-    public @Nullable Object approve(Long guestId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'approve'");
+    @Transactional
+    public ResponseGuest approve(Long id) {
+        Guest guest = repository.findById(id)
+            .orElseThrow(() -> new GuestNotFoundException(id));
+        if (guest.getStatus() != GuestStatus.PENDING_APPROVAL){
+            throw new GuestApprovedStatusConflictException(id);
+        }
+        guest.setStatus(GuestStatus.APPROVED);
+        return GuestMapper.toResponseGuest(guest);
     }
 }

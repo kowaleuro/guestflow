@@ -6,6 +6,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 
 import pl.mkowalik.guestflow.guest.dto.CreateGuestRequest;
 import pl.mkowalik.guestflow.guest.dto.ResponseGuest;
+import pl.mkowalik.guestflow.guest.exceptions.GuestApprovedStatusConflictException;
 import pl.mkowalik.guestflow.guest.exceptions.GuestConflictException;
 import pl.mkowalik.guestflow.guest.exceptions.GuestNotFoundException;
 import org.springframework.http.MediaType;
@@ -136,21 +137,10 @@ class GuestControllerTest {
 
     @Test
     void approve_returns200AndJson_whenStatusChangedToApproved() throws Exception {
-        Guest guest = new Guest(GUEST_NAME, GUEST_EMAIL, GuestStatus.PENDING_APPROVAL);
-        guest.setId(GUEST_ID);
         given(guestService.approve(GUEST_ID))
             .willReturn(new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GuestStatus.APPROVED));
 
-        String jsonBody = String.format(
-        """
-            {
-            "status": "APPROVED"
-            }
-        """
-        );
-        mockMvc.perform(get("/guest/{id}/status", GUEST_ID)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonBody))
+        mockMvc.perform(post("/guest/{id}/approve", GUEST_ID))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(GUEST_ID))
             .andExpect(jsonPath("$.name").value(GUEST_NAME))
@@ -159,43 +149,14 @@ class GuestControllerTest {
     }
 
     @Test
-    void approve_returns400AndProblemDetail_whenIncorrectGuestStatus() throws Exception {
-        String jsonBody = String.format(
-        """
-            {
-            "status": "NOT_EXIST"
-            }
-        """
-        );
-
-        mockMvc.perform(post("/guest/{id}/status",GUEST_ID)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonBody))
-            .andExpect(status().isBadRequest());
-
-        verifyNoInteractions(guestService);
-    }
-
-    @Test
     void approve_returns404AndProblemDetail_whenGuestNotFound() throws Exception {
-        
-        given(guestService.getById(GUEST_ID))
+        given(guestService.approve(GUEST_ID))
             .willThrow(new GuestNotFoundException(GUEST_ID));
-
-        String jsonBody = String.format(
-        """
-            {
-            "status": "APPROVED"
-            }
-        """
-        );
 
         String errorMessage = String.format("Guest user with id: %s does not exist.",GUEST_ID);
         
-        mockMvc.perform(post("/guest/{id}/status",GUEST_ID)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonBody))
-                        .andExpect(status().isNotFound())
+        mockMvc.perform(post("/guest/{id}/approve",GUEST_ID))
+            .andExpect(status().isNotFound())
             .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
             .andExpect(jsonPath("$.status").value(404))
             .andExpect(jsonPath("$.title").value("Not Found"))
@@ -204,26 +165,13 @@ class GuestControllerTest {
 
     @Test
     void approve_returns409AndProblemDetail_whenGuestAlreadyApproved() throws Exception {
-        
-        Guest guest = new Guest(GUEST_NAME, GUEST_EMAIL, GuestStatus.APPROVED);
-        guest.setId(GUEST_ID);
         given(guestService.approve(GUEST_ID))
-            .willReturn(new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GuestStatus.APPROVED));
-
-        String jsonBody = String.format(
-        """
-            {
-            "status": "APPROVED"
-            }
-        """
-        );
+            .willThrow(new GuestApprovedStatusConflictException(GUEST_ID));
 
         String errorMessage = String.format("Guest user with id: %s is already approved.",GUEST_ID);
         
-        mockMvc.perform(post("/guest/{id}/status",GUEST_ID)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonBody))
-                        .andExpect(status().isNotFound())
+        mockMvc.perform(post("/guest/{id}/approve",GUEST_ID))
+            .andExpect(status().isConflict())
             .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
             .andExpect(jsonPath("$.status").value(409))
             .andExpect(jsonPath("$.title").value("Conflict"))
