@@ -113,7 +113,7 @@ class GuestServiceTest {
 
     // ---------- approve ----------
 
-     @Test
+    @Test
     void approve_changeStatusAndReturnsResponse_whenGuestExistAndIsNotApproved() {
         Guest guest = new Guest(GUEST_NAME, GUEST_EMAIL, GuestStatus.PENDING_APPROVAL);
         guest.setId(GUEST_ID);
@@ -128,7 +128,7 @@ class GuestServiceTest {
     }
 
     @Test
-    void approve_throwsNotFound_whenGuestNotFound() {
+    void approve_throwsConflict_whenGuestStatusIsApproved() {
         Guest guest = new Guest(GUEST_NAME, GUEST_EMAIL, GuestStatus.APPROVED);
         guest.setId(GUEST_ID);
         
@@ -140,10 +140,12 @@ class GuestServiceTest {
         assertThatThrownBy(() -> service.approve(GUEST_ID))
             .isInstanceOf(GuestApprovedStatusConflictException.class)
             .hasMessage(errorMessage);
+
+        assertThat(guest.getStatus()).isEqualTo(GuestStatus.APPROVED);
     }
 
     @Test
-    void approve_throwsConflict_whenGuestStatusIsApproved() {
+    void approve_throwsNotFound_whenGuestNotFound() {
         given(repository.findById(GUEST_ID))
             .willReturn(Optional.empty());
 
