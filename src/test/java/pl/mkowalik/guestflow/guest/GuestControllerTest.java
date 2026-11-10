@@ -29,7 +29,6 @@ class GuestControllerTest {
     private static final Long GUEST_ID    = 1L;
     private static final String GUEST_NAME  = "Jan Kowals";
     private static final String GUEST_EMAIL = "jano@example.com";
-    private static final GuestStatus GUEST_STATUS = GuestStatus.PENDING_APPROVAL;
     private static final String BASE_URL = "http://localhost";
 
     // ---------- getById ----------
@@ -37,7 +36,7 @@ class GuestControllerTest {
     @Test
     void getGuestById_returns200AndJson_whenGuestExists() throws Exception {
         given(guestService.getById(GUEST_ID))
-            .willReturn(new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GUEST_STATUS));
+            .willReturn(new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GuestStatus.PENDING_APPROVAL));
 
         mockMvc.perform(get("/guest/{id}", GUEST_ID))
             .andExpect(status().isOk())
@@ -67,7 +66,7 @@ class GuestControllerTest {
     void postRegister_returns201AndJson_whenRegistered() throws Exception {
         CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL);
         given(guestService.register(request))
-            .willReturn(new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GUEST_STATUS));
+            .willReturn(new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GuestStatus.PENDING_APPROVAL));
 
         String jsonBody = String.format(
             """
@@ -132,4 +131,104 @@ class GuestControllerTest {
 
         verifyNoInteractions(guestService);
     }
+
+    // ---------- approve ----------
+
+    @Test
+    void approve_returns200AndJson_whenStatusChangedToApproved() throws Exception {
+        Guest guest = new Guest(GUEST_NAME, GUEST_EMAIL, GuestStatus.PENDING_APPROVAL);
+        guest.setId(GUEST_ID);
+        given(guestService.approve(GUEST_ID))
+            .willReturn(new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GuestStatus.APPROVED));
+
+        String jsonBody = String.format(
+        """
+            {
+            "status": "APPROVED"
+            }
+        """
+        );
+        mockMvc.perform(get("/guest/{id}/status", GUEST_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonBody))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(GUEST_ID))
+            .andExpect(jsonPath("$.name").value(GUEST_NAME))
+            .andExpect(jsonPath("$.email").value(GUEST_EMAIL))
+            .andExpect(jsonPath("$.status").value("APPROVED"));
+    }
+
+    @Test
+    void approve_returns400AndProblemDetail_whenIncorrectGuestStatus() throws Exception {
+        String jsonBody = String.format(
+        """
+            {
+            "status": "NOT_EXIST"
+            }
+        """
+        );
+
+        mockMvc.perform(post("/guest/{id}/status",GUEST_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonBody))
+            .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(guestService);
+    }
+
+    @Test
+    void approve_returns404AndProblemDetail_whenGuestNotFound() throws Exception {
+        
+        given(guestService.getById(GUEST_ID))
+            .willThrow(new GuestNotFoundException(GUEST_ID));
+
+        String jsonBody = String.format(
+        """
+            {
+            "status": "APPROVED"
+            }
+        """
+        );
+
+        String errorMessage = String.format("Guest user with id: %s does not exist.",GUEST_ID);
+        
+        mockMvc.perform(post("/guest/{id}/status",GUEST_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonBody))
+                        .andExpect(status().isNotFound())
+            .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.status").value(404))
+            .andExpect(jsonPath("$.title").value("Not Found"))
+            .andExpect(jsonPath("$.detail").value(errorMessage));
+    }
+
+    @Test
+    void approve_returns409AndProblemDetail_whenGuestAlreadyApproved() throws Exception {
+        
+        Guest guest = new Guest(GUEST_NAME, GUEST_EMAIL, GuestStatus.APPROVED);
+        guest.setId(GUEST_ID);
+        given(guestService.approve(GUEST_ID))
+            .willReturn(new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GuestStatus.APPROVED));
+
+        String jsonBody = String.format(
+        """
+            {
+            "status": "APPROVED"
+            }
+        """
+        );
+
+        String errorMessage = String.format("Guest user with id: %s is already approved.",GUEST_ID);
+        
+        mockMvc.perform(post("/guest/{id}/status",GUEST_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonBody))
+                        .andExpect(status().isNotFound())
+            .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.status").value(409))
+            .andExpect(jsonPath("$.title").value("Conflict"))
+            .andExpect(jsonPath("$.detail").value(errorMessage));
+    }
+
+
 }

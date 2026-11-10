@@ -29,7 +29,6 @@ class GuestServiceTest {
     private static final Long GUEST_ID    = 1L;
     private static final String GUEST_NAME  = "Jan Kowals";
     private static final String GUEST_EMAIL = "jano@example.com";
-    private static final GuestStatus GUEST_STATUS = GuestStatus.PENDING_APPROVAL;
 
     @Mock
     GuestRepository repository;
@@ -44,7 +43,7 @@ class GuestServiceTest {
 
     @Test
     void getById_returnsResponse_whenGuestExists() {
-        Guest guest = new Guest(GUEST_NAME, GUEST_EMAIL, GUEST_STATUS);
+        Guest guest = new Guest(GUEST_NAME, GUEST_EMAIL, GuestStatus.PENDING_APPROVAL);
         guest.setId(GUEST_ID);
         given(repository.findById(GUEST_ID))
             .willReturn(Optional.of(guest));
@@ -52,7 +51,7 @@ class GuestServiceTest {
         ResponseGuest result = service.getById(GUEST_ID);
 
         assertThat(result)
-            .isEqualTo(new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GUEST_STATUS));
+            .isEqualTo(new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GuestStatus.PENDING_APPROVAL));
     }
 
     @Test
@@ -74,11 +73,13 @@ class GuestServiceTest {
         
         given(repository.existsByEmail(request.email()))
             .willReturn(true);
-        
+                
         String errorMessage = String.format("Guest user with email: %s already exists.",GUEST_EMAIL);
         assertThatThrownBy(() -> service.register(request))
             .isInstanceOf(GuestConflictException.class)
             .hasMessage(errorMessage);
+        
+        then(repository).should(never()).save(any());
     }
 
     @Test
@@ -106,6 +107,9 @@ class GuestServiceTest {
         assertThat(saved.getStatus()).isEqualTo(GuestStatus.PENDING_APPROVAL);
 
         assertThat(result)
-            .isEqualTo(new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GUEST_STATUS));
+            .isEqualTo(new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GuestStatus.PENDING_APPROVAL));
     }
+
+    // ---------- approve ----------
+
 }
