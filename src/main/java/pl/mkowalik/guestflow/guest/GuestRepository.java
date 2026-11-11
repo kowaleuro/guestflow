@@ -8,4 +8,5 @@ interface GuestRepository extends JpaRepository<Guest, Long>{
     Optional<Guest> findByEmail(String email);
     boolean existsByEmail(String email);
     List<Guest> findByStatus(GuestStatus status);
+    List<Guest> findBySponsorId(Long sponsorId);
 }

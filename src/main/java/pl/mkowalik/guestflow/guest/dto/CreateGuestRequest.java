@@ -5,5 +5,10 @@ import jakarta.validation.constraints.NotBlank;
 
 public record CreateGuestRequest(
     @NotBlank String name,
-    @Email @NotBlank String email
-){}
+    @Email @NotBlank String email,
+    Long sponsorId
+){
+    public CreateGuestRequest(String name, String email){
+        this(name, email, null);
+    }
+}
