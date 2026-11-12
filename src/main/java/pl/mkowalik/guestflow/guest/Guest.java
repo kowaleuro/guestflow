@@ -10,6 +10,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import pl.mkowalik.guestflow.guest.enums.GuestStatus;
+import pl.mkowalik.guestflow.guest.enums.GuestType;
 import pl.mkowalik.guestflow.sponsor.Sponsor;
 
 @Entity
@@ -23,6 +25,9 @@ public class Guest {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Enumerated
+    private GuestType type;
+    
     @Enumerated(EnumType.STRING)
     private GuestStatus status;
 
@@ -31,6 +36,8 @@ public class Guest {
     private Sponsor sponsor;
 
     public Guest(){}
+
+    
 
     public Guest(String name, String email, GuestStatus status) {
         this.name = name;
@@ -58,6 +65,10 @@ public class Guest {
         return status;
     }
 
+    public GuestType getType() {
+        return type;
+    }
+
     public void setEmail(String email) {
         this.email = email;
     }
@@ -76,5 +87,9 @@ public class Guest {
 
     public void setStatus(GuestStatus status) {
         this.status = status;
+    }
+
+    public void setType(GuestType type) {
+        this.type = type;
     }
 }

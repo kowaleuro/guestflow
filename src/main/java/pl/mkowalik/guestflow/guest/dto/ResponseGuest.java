@@ -1,6 +1,6 @@
 package pl.mkowalik.guestflow.guest.dto;
 
-import pl.mkowalik.guestflow.guest.GuestStatus;
+import pl.mkowalik.guestflow.guest.enums.GuestStatus;
 import pl.mkowalik.guestflow.sponsor.dto.SponsorSummary;
 
 public record ResponseGuest(

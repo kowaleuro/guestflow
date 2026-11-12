@@ -1,4 +1,4 @@
-package pl.mkowalik.guestflow.guest;
+package pl.mkowalik.guestflow.guest.enums;
 
 public enum GuestStatus {
     PENDING_APPROVAL,
