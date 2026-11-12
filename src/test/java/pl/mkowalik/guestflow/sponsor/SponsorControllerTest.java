@@ -11,8 +11,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import pl.mkowalik.guestflow.guest.dto.CreateGuestRequest;
-import pl.mkowalik.guestflow.guest.exceptions.GuestConflictException;
 import pl.mkowalik.guestflow.sponsor.dto.CreateSponsorRequest;
 import pl.mkowalik.guestflow.sponsor.dto.ResponseSponsor;
 import pl.mkowalik.guestflow.sponsor.exceptions.SponsorConflictException;

@@ -19,6 +19,9 @@ import pl.mkowalik.guestflow.guest.dto.ResponseGuest;
 import pl.mkowalik.guestflow.guest.exceptions.GuestApprovedStatusConflictException;
 import pl.mkowalik.guestflow.guest.exceptions.GuestConflictException;
 import pl.mkowalik.guestflow.guest.exceptions.GuestNotFoundException;
+import pl.mkowalik.guestflow.sponsor.Sponsor;
+import pl.mkowalik.guestflow.sponsor.SponsorService;
+import pl.mkowalik.guestflow.sponsor.exceptions.SponsorNotFoundException;
 
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
@@ -30,9 +33,16 @@ class GuestServiceTest {
     private static final Long GUEST_ID    = 1L;
     private static final String GUEST_NAME  = "Jan Kowals";
     private static final String GUEST_EMAIL = "jano@example.com";
+    private static final Long SPONSOR_ID    = 2L;
+    private static final String SPONSOR_NAME  = "sponsor Sponsor";
+    private static final String SPONSOR_EMAIL = "sponsor@example.com";
 
     @Mock
     GuestRepository repository;
+
+    @Mock
+    SponsorService sponsorService;
+
 
     @InjectMocks
     GuestService service;
@@ -70,7 +80,7 @@ class GuestServiceTest {
 
     @Test
     void register_throwsConflict_whenEmailAlreadyExist() {
-        CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL);
+        CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL,SPONSOR_ID);
         
         given(repository.existsByEmail(request.email()))
             .willReturn(true);
@@ -78,6 +88,24 @@ class GuestServiceTest {
         String errorMessage = String.format("Guest user with email: %s already exists.",GUEST_EMAIL);
         assertThatThrownBy(() -> service.register(request))
             .isInstanceOf(GuestConflictException.class)
+            .hasMessage(errorMessage);
+        
+        then(repository).should(never()).save(any());
+    }
+
+    @Test
+    void register_throwsNotFound_whenSponsorNotFound() {
+        CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL,SPONSOR_ID);
+        
+        given(repository.existsByEmail(request.email()))
+            .willReturn(false);
+
+        given(sponsorService.getEntityById(SPONSOR_ID))
+            .willThrow(new SponsorNotFoundException(SPONSOR_ID));
+                
+        String errorMessage = String.format("Sponsor with id: %s does not exist.",SPONSOR_ID);
+        assertThatThrownBy(() -> service.register(request))
+            .isInstanceOf(SponsorNotFoundException.class)
             .hasMessage(errorMessage);
         
         then(repository).should(never()).save(any());
@@ -97,6 +125,37 @@ class GuestServiceTest {
                 return saved;
             });
 
+        ResponseGuest result = service.register(request);
+
+        then(repository).should().save(guestCaptor.capture());
+        Guest saved = guestCaptor.getValue();
+
+        assertThat(saved.getName()).isEqualTo(GUEST_NAME);
+        assertThat(saved.getEmail()).isEqualTo(GUEST_EMAIL);
+        assertThat(saved.getStatus()).isEqualTo(GuestStatus.PENDING_APPROVAL);
+
+        assertThat(result)
+            .isEqualTo(new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GuestStatus.PENDING_APPROVAL));
+    }
+
+    @Test
+    void register_savesPendingGuestAndReturnsResponse_whenEmailIsNewAndSponsorIsSet() {
+        CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL,SPONSOR_ID);
+        Sponsor sponsor = new Sponsor(SPONSOR_NAME, SPONSOR_EMAIL);
+        sponsor.setId(SPONSOR_ID);
+        
+        given(repository.existsByEmail(GUEST_EMAIL))
+            .willReturn(false);
+        
+        given(sponsorService.getEntityById(SPONSOR_ID))
+            .willReturn(sponsor);
+        
+        given(repository.save(any(Guest.class)))
+            .willAnswer(invocation -> {
+                Guest saved = invocation.getArgument(0);
+                saved.setId(GUEST_ID);
+                return saved;
+            });
 
         ResponseGuest result = service.register(request);
 
@@ -106,6 +165,7 @@ class GuestServiceTest {
         assertThat(saved.getName()).isEqualTo(GUEST_NAME);
         assertThat(saved.getEmail()).isEqualTo(GUEST_EMAIL);
         assertThat(saved.getStatus()).isEqualTo(GuestStatus.PENDING_APPROVAL);
+        assertThat(saved.getSponsor()).isSameAs(sponsor);
 
         assertThat(result)
             .isEqualTo(new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GuestStatus.PENDING_APPROVAL));

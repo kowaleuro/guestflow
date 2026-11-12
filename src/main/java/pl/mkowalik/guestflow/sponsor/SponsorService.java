@@ -16,10 +16,15 @@ public class SponsorService {
         this.sponsorRepository = sponsorRepository;
     }
 
-    @Transactional (readOnly = true)
-    public ResponseSponsor getById(Long id){
+    public Sponsor getEntityById(Long id){
         Sponsor sponsor = sponsorRepository.findById(id)
             .orElseThrow(() -> new SponsorNotFoundException(id));
+        return sponsor;
+    }
+
+    @Transactional (readOnly = true)
+    public ResponseSponsor getById(Long id){
+        Sponsor sponsor = getEntityById(id);
         return SponsorMapper.toResponseSponsor(sponsor);
     }
 
