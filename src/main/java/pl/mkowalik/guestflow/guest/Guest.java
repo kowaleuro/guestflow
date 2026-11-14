@@ -25,8 +25,9 @@ public class Guest {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Enumerated
+    @Enumerated(EnumType.STRING)
     private GuestType type;
+    
     
     @Enumerated(EnumType.STRING)
     private GuestStatus status;
@@ -37,13 +38,22 @@ public class Guest {
 
     public Guest(){}
 
-    
-
     public Guest(String name, String email, GuestStatus status) {
         this.name = name;
         this.email = email;
         this.status = status;
     }
+
+    // ---------- Methods ----------
+
+    public void assignSponsor(Sponsor sponsor) {
+        if (this.type != GuestType.SPONSORED){
+            throw new IllegalArgumentException("Sponsor must be set only for SPONSORED guests");
+        }
+        setSponsor(sponsor);
+    }
+
+    // ---------- Getters and Setters ----------
 
     public String getEmail() {
         return email;
@@ -81,11 +91,11 @@ public class Guest {
         this.name = name;
     }
 
-    public void setSponsor(Sponsor sponsor) {
+    private  void setSponsor(Sponsor sponsor) {
         this.sponsor = sponsor;
     }
 
-    public void setStatus(GuestStatus status) {
+    public  void setStatus(GuestStatus status) {
         this.status = status;
     }
 

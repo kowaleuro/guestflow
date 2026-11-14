@@ -7,7 +7,6 @@ import pl.mkowalik.guestflow.guest.dto.CreateGuestRequest;
 import pl.mkowalik.guestflow.guest.dto.ResponseGuest;
 import pl.mkowalik.guestflow.guest.enums.GuestStatus;
 import pl.mkowalik.guestflow.guest.exceptions.*;
-import pl.mkowalik.guestflow.sponsor.Sponsor;
 import pl.mkowalik.guestflow.sponsor.SponsorService;
 
 @Service
@@ -41,7 +40,7 @@ public class GuestService {
         Guest guest = new Guest(req.name(), req.email(), GuestStatus.PENDING_APPROVAL);
         guest.setType(req.type());
         if (req.sponsorEmail() != null){
-            guest.setSponsor(sponsorService.getEntityByEmail(req.sponsorEmail()));
+            guest.assignSponsor(sponsorService.getEntityByEmail(req.sponsorEmail()));
         }
         return GuestMapper.toResponseGuest(repository.save(guest));
     }
