@@ -7,9 +7,12 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import pl.mkowalik.guestflow.guest.dto.CreateGuestRequest;
 import pl.mkowalik.guestflow.guest.dto.ResponseGuest;
 import pl.mkowalik.guestflow.guest.enums.GuestStatus;
+import pl.mkowalik.guestflow.guest.enums.GuestType;
 import pl.mkowalik.guestflow.guest.exceptions.GuestApprovedStatusConflictException;
 import pl.mkowalik.guestflow.guest.exceptions.GuestConflictException;
 import pl.mkowalik.guestflow.guest.exceptions.GuestNotFoundException;
+import pl.mkowalik.guestflow.sponsor.dto.SponsorSummary;
+
 import org.springframework.http.MediaType;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -31,6 +34,9 @@ class GuestControllerTest {
     private static final Long GUEST_ID    = 1L;
     private static final String GUEST_NAME  = "Jan Kowals";
     private static final String GUEST_EMAIL = "jano@example.com";
+    private static final Long SPONSOR_ID    = 2L;
+    private static final String SPONSOR_NAME  = "sponsor Sponsor";
+    private static final String SPONSOR_EMAIL = "sponsor@example.com";
     private static final String BASE_URL = "http://localhost";
 
     // ---------- getById ----------
@@ -65,19 +71,47 @@ class GuestControllerTest {
     // ---------- register ----------
 
     @Test
+    void postRegister_returns201AndJson_whenRegisteredAndSponsored() throws Exception {
+        CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL,GuestType.SPONSORED, SPONSOR_EMAIL);
+        given(guestService.register(request))
+            .willReturn(new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GuestStatus.PENDING_APPROVAL, new SponsorSummary(SPONSOR_ID, SPONSOR_NAME, SPONSOR_EMAIL)));
+
+        String jsonBody = String.format(
+            """
+                {
+                "name": "%s", "email": "%s", "type": "%s", "sponsorEmail": "%s"
+                }
+            """,
+            GUEST_NAME, GUEST_EMAIL, GuestType.SPONSORED, SPONSOR_EMAIL
+        );
+        mockMvc.perform(post("/guest")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(jsonBody))
+            .andExpect(status().isCreated())
+            .andExpect(header().string("Location", "%s/guest/%s".formatted(BASE_URL,GUEST_ID)))
+            .andExpect(jsonPath("$.id").value(GUEST_ID))
+            .andExpect(jsonPath("$.name").value(GUEST_NAME))
+            .andExpect(jsonPath("$.email").value(GUEST_EMAIL))
+            .andExpect(jsonPath("$.status").value("PENDING_APPROVAL"))
+            .andExpect(jsonPath("$.sponsorSummary.id").value(SPONSOR_ID))
+            .andExpect(jsonPath("$.sponsorSummary.name").value(SPONSOR_NAME))
+            .andExpect(jsonPath("$.sponsorSummary.email").value(SPONSOR_EMAIL));
+    }
+
+    @Test
     void postRegister_returns201AndJson_whenRegistered() throws Exception {
-        CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL);
+        CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL,GuestType.SELF_REGISTERED);
         given(guestService.register(request))
             .willReturn(new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GuestStatus.PENDING_APPROVAL));
 
         String jsonBody = String.format(
             """
                 {
-                "name": "%s", "email": "%s"
+                "name": "%s", "email": "%s", "type": "%s"
                 }
             """,
-            GUEST_NAME, GUEST_EMAIL
-        ); 
+            GUEST_NAME, GUEST_EMAIL, GuestType.SELF_REGISTERED
+        );
         mockMvc.perform(post("/guest")
             .contentType(MediaType.APPLICATION_JSON)
             .content(jsonBody))
@@ -91,17 +125,17 @@ class GuestControllerTest {
 
     @Test
     void postRegister_returns409AndProblemDetail_whenConflict() throws Exception {
-        CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL);
+        CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL,GuestType.SELF_REGISTERED);
         given(guestService.register(request))
             .willThrow(new GuestConflictException(GUEST_EMAIL));
         
         String jsonBody = String.format(
             """
                 {
-                "name": "%s", "email": "%s"
+                "name": "%s", "email": "%s", "type": "%s"
                 }
             """,
-            GUEST_NAME, GUEST_EMAIL
+            GUEST_NAME, GUEST_EMAIL, GuestType.SELF_REGISTERED
         ); 
         
         String errorMessage = String.format("Guest user with email: %s already exists.",GUEST_EMAIL);
@@ -120,10 +154,10 @@ class GuestControllerTest {
         String jsonBody = String.format(
             """
                 {
-                "name": "%s", "email": "%s"
+                "name": "%s", "email": "%s", "type": "%s"
                 }
             """,
-            GUEST_NAME, "guest.Test"
+            GUEST_NAME, "Test.test", GuestType.SELF_REGISTERED
         ); 
 
         mockMvc.perform(post("/guest")

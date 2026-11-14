@@ -22,6 +22,12 @@ public class SponsorService {
         return sponsor;
     }
 
+    public Sponsor getEntityByEmail(String email){
+        Sponsor sponsor = sponsorRepository.findByEmail(email)
+            .orElseThrow(() -> new SponsorNotFoundException(email));
+        return sponsor;
+    }
+
     @Transactional (readOnly = true)
     public ResponseSponsor getById(Long id){
         Sponsor sponsor = getEntityById(id);

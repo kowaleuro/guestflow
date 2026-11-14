@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import pl.mkowalik.guestflow.guest.dto.CreateGuestRequest;
 import pl.mkowalik.guestflow.guest.dto.ResponseGuest;
 import pl.mkowalik.guestflow.guest.enums.GuestStatus;
+import pl.mkowalik.guestflow.guest.enums.GuestType;
 import pl.mkowalik.guestflow.guest.exceptions.GuestApprovedStatusConflictException;
 import pl.mkowalik.guestflow.guest.exceptions.GuestConflictException;
 import pl.mkowalik.guestflow.guest.exceptions.GuestNotFoundException;
@@ -81,7 +82,7 @@ class GuestServiceTest {
 
     @Test
     void register_throwsConflict_whenEmailAlreadyExist() {
-        CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL,SPONSOR_ID);
+        CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL,GuestType.SPONSORED,SPONSOR_EMAIL);
         
         given(repository.existsByEmail(request.email()))
             .willReturn(true);
@@ -96,15 +97,15 @@ class GuestServiceTest {
 
     @Test
     void register_throwsNotFound_whenSponsorNotFound() {
-        CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL,SPONSOR_ID);
+        CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL,GuestType.SPONSORED,SPONSOR_EMAIL);
         
         given(repository.existsByEmail(request.email()))
             .willReturn(false);
 
-        given(sponsorService.getEntityById(SPONSOR_ID))
-            .willThrow(new SponsorNotFoundException(SPONSOR_ID));
+        given(sponsorService.getEntityByEmail(SPONSOR_EMAIL))
+            .willThrow(new SponsorNotFoundException(SPONSOR_EMAIL));
                 
-        String errorMessage = String.format("Sponsor with id: %s does not exist.",SPONSOR_ID);
+        String errorMessage = String.format("Sponsor with email: %s does not exist.",SPONSOR_EMAIL);
         assertThatThrownBy(() -> service.register(request))
             .isInstanceOf(SponsorNotFoundException.class)
             .hasMessage(errorMessage);
@@ -114,7 +115,7 @@ class GuestServiceTest {
 
     @Test
     void register_savesPendingGuestAndReturnsResponse_whenEmailIsNew() {
-        CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL);
+        CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL,GuestType.SELF_REGISTERED);
         
         given(repository.existsByEmail(GUEST_EMAIL))
             .willReturn(false);
@@ -141,14 +142,14 @@ class GuestServiceTest {
 
     @Test
     void register_savesPendingGuestAndReturnsResponse_whenEmailIsNewAndSponsorIsSet() {
-        CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL,SPONSOR_ID);
+        CreateGuestRequest request = new CreateGuestRequest(GUEST_NAME,GUEST_EMAIL,GuestType.SPONSORED,SPONSOR_EMAIL);
         Sponsor sponsor = new Sponsor(SPONSOR_NAME, SPONSOR_EMAIL);
         sponsor.setId(SPONSOR_ID);
         
         given(repository.existsByEmail(GUEST_EMAIL))
             .willReturn(false);
         
-        given(sponsorService.getEntityById(SPONSOR_ID))
+        given(sponsorService.getEntityByEmail(SPONSOR_EMAIL))
             .willReturn(sponsor);
         
         given(repository.save(any(Guest.class)))
@@ -166,6 +167,7 @@ class GuestServiceTest {
         assertThat(saved.getName()).isEqualTo(GUEST_NAME);
         assertThat(saved.getEmail()).isEqualTo(GUEST_EMAIL);
         assertThat(saved.getStatus()).isEqualTo(GuestStatus.PENDING_APPROVAL);
+        assertThat(saved.getType()).isEqualTo(GuestType.SPONSORED);
         assertThat(saved.getSponsor()).isSameAs(sponsor);
 
         assertThat(result)

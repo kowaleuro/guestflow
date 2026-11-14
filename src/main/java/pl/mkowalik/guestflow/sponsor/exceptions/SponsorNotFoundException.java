@@ -6,4 +6,7 @@ public class SponsorNotFoundException extends NotFoundException{
     public SponsorNotFoundException(Long id){
         super(String.format("Sponsor with id: %s does not exist.", id));
     }
+    public SponsorNotFoundException(String email){
+        super(String.format("Sponsor with email: %s does not exist.", email));
+    }
 }
