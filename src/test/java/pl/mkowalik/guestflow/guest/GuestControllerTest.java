@@ -12,6 +12,7 @@ import pl.mkowalik.guestflow.guest.exceptions.GuestApprovedStatusConflictExcepti
 import pl.mkowalik.guestflow.guest.exceptions.GuestConflictException;
 import pl.mkowalik.guestflow.guest.exceptions.GuestNotFoundException;
 import pl.mkowalik.guestflow.sponsor.dto.SponsorSummary;
+import pl.mkowalik.guestflow.sponsor.exceptions.SponsorNotFoundException;
 
 import org.springframework.http.MediaType;
 import static org.mockito.BDDMockito.given;
@@ -21,6 +22,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @WebMvcTest(GuestController.class)
 class GuestControllerTest {
@@ -213,5 +217,44 @@ class GuestControllerTest {
             .andExpect(jsonPath("$.detail").value(errorMessage));
     }
 
+    // ---------- getBySponsor ----------
+    @Test
+    void getBySponsor_returns200AndJson_whenGuestsLinked() throws Exception {
+        ResponseGuest g1 = new ResponseGuest(GUEST_ID, GUEST_NAME, GUEST_EMAIL, GuestStatus.PENDING_APPROVAL);
+        ResponseGuest g2 = new ResponseGuest(GUEST_ID, GUEST_NAME, "jan2@test.pl", GuestStatus.PENDING_APPROVAL);
+        List<ResponseGuest> guests = List.of(g1, g2);
+        given(guestService.getBySponsor(SPONSOR_ID))
+            .willReturn(guests);
 
+        mockMvc.perform(get("/guest/getSponsored/{sponsorId}", SPONSOR_ID))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$[0].name").value(GUEST_NAME))
+            .andExpect(jsonPath("$[0].email").value(GUEST_EMAIL))
+            .andExpect(jsonPath("$[1].name").value(GUEST_NAME));
+    }
+    
+    @Test
+    void getBySponsor_returns200AndJson_whenNoGuestsLinked() throws Exception {
+        given(guestService.getBySponsor(SPONSOR_ID))
+            .willReturn(new ArrayList<>());
+
+        mockMvc.perform(get("/guest/getSponsored/{sponsorId}", SPONSOR_ID))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void getBySponsor_returns404AndProblemDetail_whenSponsorNotFound() throws Exception {
+        given(guestService.getBySponsor(SPONSOR_ID))
+            .willThrow(new SponsorNotFoundException(SPONSOR_ID));
+
+        String errorMessage = String.format("Sponsor with id: %s does not exist.",SPONSOR_ID);
+        mockMvc.perform(get("/guest/getSponsored/{sponsorId}", SPONSOR_ID))
+            .andExpect(status().isNotFound())
+            .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.status").value(404))
+            .andExpect(jsonPath("$.title").value("Not Found"))
+            .andExpect(jsonPath("$.detail").value(errorMessage));
+    }
 }

@@ -8,6 +8,8 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -56,7 +58,7 @@ class GuestServiceTest {
 
     @Test
     void getById_returnsResponse_whenGuestExists() {
-        Guest guest = new Guest(GUEST_NAME, GUEST_EMAIL, GuestStatus.PENDING_APPROVAL);
+        Guest guest = new Guest(GUEST_NAME, GUEST_EMAIL, GuestType.SELF_REGISTERED);
         guest.setId(GUEST_ID);
         given(repository.findById(GUEST_ID))
             .willReturn(Optional.of(guest));
@@ -178,7 +180,7 @@ class GuestServiceTest {
 
     @Test
     void approve_changeStatusAndReturnsResponse_whenGuestExistAndIsNotApproved() {
-        Guest guest = new Guest(GUEST_NAME, GUEST_EMAIL, GuestStatus.PENDING_APPROVAL);
+        Guest guest = new Guest(GUEST_NAME, GUEST_EMAIL, GuestType.SELF_REGISTERED);
         guest.setId(GUEST_ID);
         
         given(repository.findById(GUEST_ID))
@@ -192,7 +194,8 @@ class GuestServiceTest {
 
     @Test
     void approve_throwsConflict_whenGuestStatusIsApproved() {
-        Guest guest = new Guest(GUEST_NAME, GUEST_EMAIL, GuestStatus.APPROVED);
+        Guest guest = new Guest(GUEST_NAME, GUEST_EMAIL, GuestType.SELF_REGISTERED);
+        guest.setStatus(GuestStatus.APPROVED);
         guest.setId(GUEST_ID);
         
         given(repository.findById(GUEST_ID))
@@ -215,6 +218,62 @@ class GuestServiceTest {
         String errorMessage = String.format("Guest user with id: %s does not exist.",GUEST_ID);
         assertThatThrownBy(() -> service.approve(GUEST_ID))
             .isInstanceOf(GuestNotFoundException.class)
+            .hasMessage(errorMessage);
+    }
+
+    // ---------- getBySponsor ----------
+
+    @Test
+    void getBySponsor_returnsResponse_whenGuestsLinked() {
+        Guest guest1 = new Guest(GUEST_NAME, GUEST_EMAIL, GuestType.SPONSORED);
+        Guest guest2 = new Guest(GUEST_NAME, GUEST_EMAIL, GuestType.SPONSORED);
+        // guest1.setId(GUEST_ID);
+        // guest2.setId(GUEST_ID);
+        Sponsor sponsor = new Sponsor(SPONSOR_NAME, SPONSOR_EMAIL);
+        sponsor.setId(SPONSOR_ID);
+
+        guest1.assignSponsor(sponsor);
+        guest2.assignSponsor(sponsor);
+        given(sponsorService.getEntityById(SPONSOR_ID))
+            .willReturn(sponsor);
+
+        List<Guest> guests = List.of(guest1, guest2);
+
+        given(repository.findBySponsorId(SPONSOR_ID))
+            .willReturn(guests);
+
+        
+        List<ResponseGuest> result = service.getBySponsor(SPONSOR_ID);
+
+        assertThat(result)
+            .containsExactlyElementsOf(GuestMapper.toResponseGuests(guests));
+    }
+
+    @Test
+    void getBySponsor_returnsResponse_whenNoGuestLinked() {
+        Sponsor sponsor = new Sponsor(SPONSOR_NAME, SPONSOR_EMAIL);
+        sponsor.setId(SPONSOR_ID);
+
+        given(sponsorService.getEntityById(SPONSOR_ID))
+            .willReturn(sponsor);
+
+        given(repository.findBySponsorId(SPONSOR_ID))
+            .willReturn(new ArrayList<>());
+
+        List<ResponseGuest> result = service.getBySponsor(SPONSOR_ID);
+
+        assertThat(result)
+            .hasSize(0);
+    }
+
+    @Test
+    void getBySponsor_throwsNotFound_whenSponsorNotFound() {
+        given(sponsorService.getEntityById(SPONSOR_ID))
+            .willThrow(new SponsorNotFoundException(SPONSOR_ID));
+
+        String errorMessage = String.format("Sponsor with id: %s does not exist.",SPONSOR_ID);
+        assertThatThrownBy(() -> service.getBySponsor(SPONSOR_ID))
+            .isInstanceOf(SponsorNotFoundException.class)
             .hasMessage(errorMessage);
     }
 

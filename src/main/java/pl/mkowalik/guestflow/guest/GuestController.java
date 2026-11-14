@@ -1,6 +1,7 @@
 package pl.mkowalik.guestflow.guest;
 
 import java.net.URI;
+import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -47,4 +48,10 @@ public class GuestController {
     public ResponseGuest approve(@PathVariable Long id) {
         return service.approve(id);
     }
+
+    @GetMapping("/getSponsored/{sponsorId}")
+    public List<ResponseGuest> getSponsored(@PathVariable Long sponsorId) {
+        return service.getBySponsor(sponsorId);
+    }
+
 }

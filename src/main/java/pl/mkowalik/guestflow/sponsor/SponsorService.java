@@ -42,5 +42,4 @@ public class SponsorService {
         Sponsor sponsor = new Sponsor(req.name(), req.email());
         return SponsorMapper.toResponseSponsor(sponsorRepository.save(sponsor));
     }
-
 }

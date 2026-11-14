@@ -1,5 +1,7 @@
 package pl.mkowalik.guestflow.guest;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,13 @@ public class GuestService {
     }
 
     @Transactional(readOnly = true)
+    public List<ResponseGuest> getBySponsor(Long sponsorId){
+        sponsorService.getEntityById(sponsorId); // check if sponsor exist, otherwise 404
+        List<Guest> guests = repository.findBySponsorId(sponsorId);
+        return GuestMapper.toResponseGuests(guests);
+    }
+
+    @Transactional(readOnly = true)
     public ResponseGuest getById(Long id){
         Guest guest = getEntityById(id);
         return GuestMapper.toResponseGuest(guest);
@@ -37,8 +46,8 @@ public class GuestService {
         if (repository.existsByEmail(req.email())){
             throw new GuestConflictException(req.email());
         }
-        Guest guest = new Guest(req.name(), req.email(), GuestStatus.PENDING_APPROVAL);
-        guest.setType(req.type());
+        Guest guest = new Guest(req.name(), req.email(), req.type());
+        
         if (req.sponsorEmail() != null){
             guest.assignSponsor(sponsorService.getEntityByEmail(req.sponsorEmail()));
         }

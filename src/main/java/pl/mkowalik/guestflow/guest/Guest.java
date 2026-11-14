@@ -38,10 +38,11 @@ public class Guest {
 
     public Guest(){}
 
-    public Guest(String name, String email, GuestStatus status) {
+    public Guest(String name, String email, GuestType type) {
         this.name = name;
         this.email = email;
-        this.status = status;
+        this.type = type;
+        this.status = GuestStatus.PENDING_APPROVAL;
     }
 
     // ---------- Methods ----------
