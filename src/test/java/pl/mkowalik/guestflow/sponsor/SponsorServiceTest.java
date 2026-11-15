@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 
 import java.util.Optional;
@@ -12,6 +13,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import pl.mkowalik.guestflow.auth.account.Account;
+import pl.mkowalik.guestflow.auth.account.AccountService;
 import pl.mkowalik.guestflow.sponsor.dto.CreateSponsorRequest;
 import pl.mkowalik.guestflow.sponsor.dto.ResponseSponsor;
 import pl.mkowalik.guestflow.sponsor.exceptions.SponsorConflictException;
@@ -27,9 +30,16 @@ public class SponsorServiceTest {
     private static final Long SPONSOR_ID    = 1L;
     private static final String SPONSOR_NAME  = "sponsor Sponsor";
     private static final String SPONSOR_EMAIL = "sponsor@example.com";
+    private static final String SPONSOR_PWD = "secret123";
 
     @Mock
     SponsorRepository sponsorRepository;
+
+    @Mock
+    AccountService accountService;
+    
+    @Mock
+    Account account;
 
     @InjectMocks
     SponsorService service;
@@ -41,7 +51,7 @@ public class SponsorServiceTest {
 
     @Test
     void getById_returnsResponse_whenSponsorExists() {
-        Sponsor sponsor = new Sponsor(SPONSOR_NAME, SPONSOR_EMAIL);
+        Sponsor sponsor = new Sponsor(mock(Account.class),SPONSOR_NAME, SPONSOR_EMAIL);
         sponsor.setId(SPONSOR_ID);
         given(sponsorRepository.findById(SPONSOR_ID))
             .willReturn(Optional.of(sponsor));
@@ -67,19 +77,21 @@ public class SponsorServiceTest {
 
     @Test
     void create_savesSponsorAndReturnsResponse_whenEmailIsNew() {
-        CreateSponsorRequest request = new CreateSponsorRequest(SPONSOR_NAME,SPONSOR_EMAIL);
+        CreateSponsorRequest request = new CreateSponsorRequest(SPONSOR_NAME,SPONSOR_EMAIL,SPONSOR_PWD);
         
         given(sponsorRepository.existsByEmail(SPONSOR_EMAIL))
             .willReturn(false);
         
+        given(accountService.createSponsorAccount(request)).willReturn(account);
+
+
         given(sponsorRepository.save(any(Sponsor.class)))
             .willAnswer(invocation -> {
                 Sponsor saved = invocation.getArgument(0);
                 saved.setId(SPONSOR_ID);
                 return saved;
             });
-
-
+        
         ResponseSponsor result = service.create(request);
 
         then(sponsorRepository).should().save(sponsorCaptor.capture());
@@ -94,7 +106,7 @@ public class SponsorServiceTest {
 
     @Test
     void create_throwsConflict_whenEmailAlreadyExist() {
-        CreateSponsorRequest request = new CreateSponsorRequest(SPONSOR_NAME,SPONSOR_EMAIL);
+        CreateSponsorRequest request = new CreateSponsorRequest(SPONSOR_NAME,SPONSOR_EMAIL,SPONSOR_PWD);
         
         given(sponsorRepository.existsByEmail(request.email()))
             .willReturn(true);

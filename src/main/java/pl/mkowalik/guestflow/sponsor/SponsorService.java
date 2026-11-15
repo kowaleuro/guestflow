@@ -2,6 +2,9 @@ package pl.mkowalik.guestflow.sponsor;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import pl.mkowalik.guestflow.auth.account.Account;
+import pl.mkowalik.guestflow.auth.account.AccountService;
 import pl.mkowalik.guestflow.sponsor.dto.CreateSponsorRequest;
 import pl.mkowalik.guestflow.sponsor.dto.ResponseSponsor;
 import pl.mkowalik.guestflow.sponsor.exceptions.SponsorConflictException;
@@ -11,9 +14,11 @@ import pl.mkowalik.guestflow.sponsor.exceptions.SponsorNotFoundException;
 public class SponsorService {
     
     private final SponsorRepository sponsorRepository;
-    
-    SponsorService(SponsorRepository sponsorRepository){
+    private final AccountService accountService;
+
+    SponsorService(SponsorRepository sponsorRepository, AccountService accountService){
         this.sponsorRepository = sponsorRepository;
+        this.accountService = accountService;
     }
 
     public Sponsor getEntityById(Long id){
@@ -39,7 +44,8 @@ public class SponsorService {
         if (sponsorRepository.existsByEmail(req.email())){
             throw new SponsorConflictException(req.email());
         }
-        Sponsor sponsor = new Sponsor(req.name(), req.email());
+        Account account = accountService.createSponsorAccount(req);
+        Sponsor sponsor = new Sponsor(account, req.name(), req.email());
         return SponsorMapper.toResponseSponsor(sponsorRepository.save(sponsor));
     }
 }

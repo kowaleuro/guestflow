@@ -30,6 +30,7 @@ public class SponsorControllerTest {
     private static final Long SPONSOR_ID    = 1L;
     private static final String SPONSOR_NAME  = "sponsor Sponsor";
     private static final String SPONSOR_EMAIL = "sponsor@example.com";
+    private static final String SPONSOR_PWD = "secret123";
     private static final String BASE_URL = "http://localhost";
 
     // ---------- getById ----------
@@ -64,17 +65,17 @@ public class SponsorControllerTest {
 
     @Test
     void postCreate_returns201AndJson_whenCreated() throws Exception {
-        CreateSponsorRequest request = new CreateSponsorRequest(SPONSOR_NAME,SPONSOR_EMAIL);
+        CreateSponsorRequest request = new CreateSponsorRequest(SPONSOR_NAME,SPONSOR_EMAIL,SPONSOR_PWD);
         given(sponsorService.create(request))
             .willReturn(new ResponseSponsor(SPONSOR_ID, SPONSOR_NAME, SPONSOR_EMAIL));
 
         String jsonBody = String.format(
             """
                 {
-                "name": "%s", "email": "%s"
+                "name": "%s", "email": "%s", "password": "%s"
                 }
             """,
-            SPONSOR_NAME, SPONSOR_EMAIL
+            SPONSOR_NAME, SPONSOR_EMAIL, SPONSOR_PWD
         ); 
         mockMvc.perform(post("/sponsor")
             .contentType(MediaType.APPLICATION_JSON)
@@ -88,17 +89,17 @@ public class SponsorControllerTest {
 
     @Test
     void postCreate_returns409AndProblemDetail_whenConflict() throws Exception {
-        CreateSponsorRequest request = new CreateSponsorRequest(SPONSOR_NAME,SPONSOR_EMAIL);
+        CreateSponsorRequest request = new CreateSponsorRequest(SPONSOR_NAME,SPONSOR_EMAIL,SPONSOR_PWD);
         given(sponsorService.create(request))
             .willThrow(new SponsorConflictException(SPONSOR_EMAIL));
         
         String jsonBody = String.format(
             """
                 {
-                "name": "%s", "email": "%s"
+                "name": "%s", "email": "%s", "password": "%s"
                 }
             """,
-            SPONSOR_NAME, SPONSOR_EMAIL
+            SPONSOR_NAME, SPONSOR_EMAIL, SPONSOR_PWD
         ); 
         
         String errorMessage = String.format("Sponsor with email: %s already exists.",SPONSOR_EMAIL);

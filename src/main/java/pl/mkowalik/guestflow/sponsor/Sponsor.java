@@ -8,7 +8,10 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import pl.mkowalik.guestflow.auth.account.Account;
 import pl.mkowalik.guestflow.guest.Guest;
 
 @Entity
@@ -25,9 +28,14 @@ public class Sponsor {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @OneToOne(optional = true)
+    @JoinColumn(name = "account_id", unique = true)
+    private Account account;
+
     public Sponsor(){}
 
-    public Sponsor(String name, String email) {
+    public Sponsor(Account account, String name, String email) {
+        this.account = account;
         this.name = name;
         this.email = email;
     }
