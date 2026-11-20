@@ -32,6 +32,7 @@ public class AccountService implements UserDetailsService{
         accountRepository.save(account);
         return account;
     }
+
     // ---------- Guest ----------
     public Account createGuestAccount(CreateGuestRequest request){
         return createAndSaveAccount(request.email(), null, AccountRole.GUEST);
